@@ -1,0 +1,130 @@
+'''
+Требуется написать объектно-ориентированную программу с графическим интерфейсом в соответствии со своим вариантом.
+В программе должны быть реализованы минимум один класс, три атрибута, четыре метода (функции).
+Ввод данных из файла с контролем правильности ввода.
+Базы данных использовать нельзя. При необходимости сохранять информацию в виде файлов, разделяя значения запятыми или пробелами.
+Для GUI использовать библиотеку tkinter.
+
+
+Объекты – договоры на трудоустройство
+Функции:сегментация полного списка договоров по компаниям, обратившимся за специалистами
+визуализация предыдущей функции в форме круговой диаграммы
+сегментация полного списка договоров по профессиям
+визуализация предыдущей функции в форме круговой диаграммы
+'''
+
+import tkinter as tk
+from tkinter import filedialog, messagebox  # filedialog - для выбора файла, messagebox - для окон с информацией
+import matplotlib.pyplot as plt             # для построения графиков
+from collections import Counter             # для подсчёта количества элементов
+
+
+
+
+# класс, описывающий договоры
+class Contract:
+    def __init__(self, company, profession): # конструктор класса который инициализирует атрибуты объекта при создании
+        self.company = company
+        self.profession = profession
+
+# класс для работы с договорами
+class ContractManager:
+    def __init__(self):  # создает пустой список contracts, куда будут помещаться все договоры
+        self.contracts = []
+
+    def load_contracts_from_file(self, file_path):
+        file_loaded = False  # переменная для отслеживания успешности загрузки
+
+        with open(file_path, 'r', encoding='utf-8') as file:
+            for line in file:
+                parts = line.strip().split(',')                          # каждая строка должна содержать компанию и профессию, разделенные запятой
+                if len(parts) == 2:                                      # проверка, что в строке ровно 2 значения (компания и профессия)
+                    company, profession = parts                          # распаковывает элементы списка в переменные company и profession.
+                    self.contracts.append(Contract(company, profession)) # добавление в список
+                    file_loaded = True
+                else:
+                    messagebox.showerror("Ошибка, неверный формат данных")
+                    return False
+
+        if not file_loaded:
+            messagebox.showerror("Ошибка", "Файл пуст или содержит некорректные данные")
+            return False
+
+        return True
+
+    # метод собирает все компании из списка договоров в новый список companies
+    def segment_by_company(self):
+        companies = [contract.company for contract in self.contracts]
+        return dict(Counter(companies))
+
+    # метод собирает все профессии из списка договоров в новый список professions
+    def segment_by_profession(self):
+        professions = [contract.profession for contract in self.contracts]
+        return dict(Counter(professions))
+
+# Класс для графического интерфейса
+class ContractApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Менеджер договоров")
+        self.manager = ContractManager()
+
+        self.center_window(300,200)
+
+        # кнопка для загрузки договора
+        self.load_button = tk.Button(root, text="Загрузить договор", command=self.load_contracts)
+        self.load_button.pack(pady=10)
+
+        # кнопка для сегментации по компаниям
+        self.company_button = tk.Button(root, text="Сегментация по компаниям", command=self.show_company_chart)
+        self.company_button.pack(pady=10)
+
+        # кнопка для сегментации по профессиям
+        self.profession_button = tk.Button(root, text="Сегментация по профессиям", command=self.show_profession_chart)
+        self.profession_button.pack(pady=10)
+
+    # метод который отвечает за то, чтобы окно появлялось по центру экрана у пользователя
+    def center_window(self, width, height):
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+        self.root.geometry(f'{width}x{height}+{x}+{y}')
+
+    # метод для выбора файла с договорами
+    def load_contracts(self):
+        file_path = filedialog.askopenfilename(title="Выберите файл с договорами")
+        if file_path:
+            if self.manager.load_contracts_from_file(file_path):
+                messagebox.showinfo("Успех", "Договоры успешно загружены")
+
+    # метод который показывает круговые диаграммы для компаний
+    def show_company_chart(self):
+        data = self.manager.segment_by_company()
+        if data:
+            self.plot_pie_chart(data, "Сегментация по компаниям")
+        else:
+            messagebox.showinfo("Информация", "Нет данных для отображения")
+
+    # метод который показывает круговые диаграммы для профессий
+    def show_profession_chart(self):
+        data = self.manager.segment_by_profession()
+        if data:
+            self.plot_pie_chart(data, "Сегментация по профессиям")
+        else:
+            messagebox.showinfo("Информация", "Нет данных для отображения")
+
+    # метод для построения круговой диагрыммы
+    def plot_pie_chart(self, data, title):
+        labels = data.keys()       # названия профессий или компаний которые берутся из списка
+        sizes = data.values()      # кол-во договоров для каждой компании или профессии
+
+        plt.figure(figsize=(6, 6))
+        plt.pie(sizes, labels=labels)
+        plt.title(title)
+        plt.axis('equal')
+        plt.show()
+
+root = tk.Tk()
+app = ContractApp(root)
+root.mainloop()
